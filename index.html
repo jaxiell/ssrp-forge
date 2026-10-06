@@ -43,8 +43,8 @@
         <div class="stage-wrap" id="stage">
           <div class="canvas-frame" id="canvasFrame">
             <canvas id="editorCanvas" aria-label="Canvas editor"></canvas>
-            <div class="empty-hint" id="emptyHint">
-              <div class="empty-icon">+</div>
+            <div class="empty-hint" id="emptyHint" role="button" tabindex="0" aria-label="Import screenshot">
+              <button class="empty-icon empty-import" type="button" data-action="importImage" aria-label="Import screenshot">+</button>
               <strong>Import screenshot untuk mulai</strong>
               <span>PNG · JPG · WebP · paste gambar · offline</span>
               <button class="primary" data-action="importImage">Import Screenshot</button>
@@ -160,6 +160,6 @@
     <input type="file" id="projectInput" accept=".ssrp,application/json" hidden>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <script src="app.js?v=4" defer></script>
+  <script src="app.js?v=5" defer></script>
 </body>
 </html>

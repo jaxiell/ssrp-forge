@@ -502,6 +502,8 @@
   /* Touch / Pointer: pointer map is authoritative; two-finger gesture never mutates layers. */
   function pointerDown(e){
     if(e.pointerType==='mouse' && e.button!==0)return;
+    // Canvas gestures must never steal a tap from overlay controls.
+    if(e.target!==els.canvas)return;
     els.canvas.setPointerCapture?.(e.pointerId);state.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY});
     if(state.pointers.size===2){
       if(state.gesture?.type==='single'&&state.gesture.draw?.layer){
@@ -606,8 +608,24 @@
     state.maskCache.clear();state.drawCache.clear();
   }
   function openTool(tool){
-    state.tool=tool; $$('.dock-btn').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool)); $$('.side-quick').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
-    const [k,t]=TOOL_META[tool]||['TOOL',tool]; els.sheetKicker.textContent=k;els.sheetTitle.textContent=t;els.sheetContent.innerHTML=toolMarkup(tool);els.bottomSheet.classList.add('open');els.bottomSheet.setAttribute('aria-hidden','false');els.sheetBackdrop.classList.add('show');updateCropOverlay();queueRender();
+    const wasOpen=els.bottomSheet.classList.contains('open');
+    const sameTool=state.tool===tool && wasOpen;
+    state.tool=tool;
+    $$('.dock-btn').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
+    $$('.side-quick').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
+    const [k,t]=TOOL_META[tool]||['TOOL',tool];
+    els.sheetKicker.textContent=k;
+    els.sheetTitle.textContent=t;
+    // Re-render the tool body without restarting the bottom-sheet animation.
+    // This prevents the visible "blink" when adding/updating ACT/Text layers.
+    els.sheetContent.innerHTML=toolMarkup(tool);
+    if(!wasOpen){
+      els.bottomSheet.classList.add('open');
+      els.bottomSheet.setAttribute('aria-hidden','false');
+      els.sheetBackdrop.classList.add('show');
+    }
+    updateCropOverlay();
+    queueRender();
   }
   function openSheet(kicker,title,html){els.sheetKicker.textContent=kicker;els.sheetTitle.textContent=title;els.sheetContent.innerHTML=html;els.bottomSheet.classList.add('open');els.bottomSheet.setAttribute('aria-hidden','false');els.sheetBackdrop.classList.add('show');}
   function closeSheet(){els.bottomSheet.classList.remove('open');els.bottomSheet.setAttribute('aria-hidden','true');els.sheetBackdrop.classList.remove('show');state.sampleMode=false;}
@@ -858,6 +876,10 @@
     $$('.dock-btn').forEach(b=>b.addEventListener('click',()=>openTool(b.dataset.tool)));
     $$('.side-quick').forEach(b=>b.addEventListener('click',()=>openTool(b.dataset.tool)));
     $('#quickbar').addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(b)handleAction(b.dataset.action,b);});
+    // Empty-canvas import is intentionally delegated outside the canvas pointer handler.
+    // The whole prompt (including the large + button) is tappable on Android.
+    els.empty.addEventListener('click',e=>{const b=e.target.closest('[data-action]');handleAction(b?.dataset.action||'importImage',b||els.empty);});
+    els.empty.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleAction('importImage',els.empty);}});
     els.projectName.addEventListener('change',setProjectName);els.projectName.addEventListener('keydown',e=>{if(e.key==='Enter'){e.currentTarget.blur();}});
     els.undo.addEventListener('click',undo);els.redo.addEventListener('click',redo);els.save.addEventListener('click',()=>saveProject(false));els.export.addEventListener('click',openExport);els.menu.addEventListener('click',()=>els.menuModal.setAttribute('aria-hidden','false'));els.menuClose.addEventListener('click',()=>els.menuModal.setAttribute('aria-hidden','true'));els.exportClose.addEventListener('click',()=>els.exportModal.setAttribute('aria-hidden','true'));els.sheetClose.addEventListener('click',closeSheet);els.sheetBackdrop.addEventListener('click',closeSheet);
     els.fit.addEventListener('click',fitCamera);els.zoomIn.addEventListener('click',()=>zoomCamera(1.18,els.frame.getBoundingClientRect().left+els.frame.clientWidth/2,els.frame.getBoundingClientRect().top+els.frame.clientHeight/2));els.zoomOut.addEventListener('click',()=>zoomCamera(.85,els.frame.getBoundingClientRect().left+els.frame.clientWidth/2,els.frame.getBoundingClientRect().top+els.frame.clientHeight/2));els.rotate.addEventListener('click',()=>{const l=getSelectedLayer();if(l&&!l.locked){l.rotation=(l.rotation||0)+90;commit('Rotate layer');queueRender();}else rotateCanvas();});els.fullscreen.addEventListener('click',toggleFullscreen);els.guides.addEventListener('click',()=>{state.project.guides.center=!state.project.guides.center;commit('Toggle guides');queueRender();});els.grid.addEventListener('click',()=>{state.project.guides.grid=!state.project.guides.grid;commit('Toggle grid');queueRender();});

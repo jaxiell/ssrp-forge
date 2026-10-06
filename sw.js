@@ -1,4 +1,4 @@
-const CACHE = 'ssrp-forge-v4';
+const CACHE = 'ssrp-forge-v5';
 const SHELL = ['./','./index.html','./style.css','./app.js','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
