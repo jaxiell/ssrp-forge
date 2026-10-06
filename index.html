@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0a0c10">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="SSRP Forge Studio — Android-first SA-MP Roleplay screenshot and ACT editor.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <title>SSRP Forge Studio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar safe-top">
+      <div class="brand">
+        <div class="brand-mark">SF</div>
+        <div class="brand-copy">
+          <strong>SSRP Forge</strong>
+          <span>SA-MP Screenshot Studio</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <input id="projectName" class="project-name" maxlength="80" value="Untitled Project" aria-label="Nama project">
+        <button class="icon-btn" id="undoBtn" aria-label="Undo" title="Undo">↶</button>
+        <button class="icon-btn" id="redoBtn" aria-label="Redo" title="Redo">↷</button>
+        <button class="icon-btn" id="saveBtn" aria-label="Simpan project" title="Simpan">▣</button>
+        <button class="icon-btn accent" id="exportBtn" aria-label="Export" title="Export">⇩</button>
+        <button class="icon-btn" id="menuBtn" aria-label="Menu" title="Menu">⋮</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="desktop-sidebar" aria-label="Quick tools">
+        <button class="side-quick" data-tool="act"><b>ACT</b><span>Game Chat</span></button>
+        <button class="side-quick" data-tool="layer"><b>LYR</b><span>Layers</span></button>
+        <button class="side-quick" data-tool="effects"><b>FX</b><span>Effects</span></button>
+        <button class="side-quick" data-tool="mask"><b>HUD</b><span>Cleaner</span></button>
+      </aside>
+
+      <section class="editor-area">
+        <div class="stage-wrap" id="stage">
+          <div class="canvas-frame" id="canvasFrame">
+            <canvas id="editorCanvas" aria-label="Canvas editor"></canvas>
+            <div class="empty-hint" id="emptyHint">
+              <div class="empty-icon">+</div>
+              <strong>Import screenshot untuk mulai</strong>
+              <span>PNG · JPG · WebP · paste gambar · offline</span>
+              <button class="primary" data-action="importImage">Import Screenshot</button>
+            </div>
+            <div class="guides-layer" id="guidesLayer" aria-hidden="true">
+              <span class="center-v"></span><span class="center-h"></span><span class="safe-box"></span><span class="grid"></span>
+            </div>
+            <div class="crop-overlay" id="cropOverlay" aria-hidden="true">
+              <div class="crop-box" id="cropBox"><span class="crop-corner tl"></span><span class="crop-corner tr"></span><span class="crop-corner bl"></span><span class="crop-corner br"></span></div>
+            </div>
+            <div class="stage-pill" id="stagePill">READY</div>
+          </div>
+          <div class="stage-toolbar">
+            <div class="stage-group">
+              <button class="mini-btn" id="fitBtn">FIT</button>
+              <button class="mini-btn" id="zoomOutBtn">−</button>
+              <span id="zoomLabel">100%</span>
+              <button class="mini-btn" id="zoomInBtn">+</button>
+              <button class="mini-btn" id="rotateBtn">90°</button>
+              <button class="mini-btn" id="fullscreenBtn">⛶</button>
+            </div>
+            <div class="stage-group">
+              <button class="mini-btn" id="guidesBtn">Guides</button>
+              <button class="mini-btn" id="gridBtn">Grid</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quickbar" id="quickbar">
+          <button class="quick-btn" data-action="importImage">＋ <span>Import</span></button>
+          <button class="quick-btn hot" data-action="addAct">✎ <span>ACT</span></button>
+          <button class="quick-btn" data-action="addText">T <span>Text</span></button>
+          <button class="quick-btn" data-action="addShape">□ <span>Shape</span></button>
+          <button class="quick-btn" data-action="openLayers">▤ <span>Layers</span></button>
+          <button class="quick-btn" data-action="openEffects">◐ <span>FX</span></button>
+        </div>
+
+        <nav class="tool-dock" aria-label="Editor tools">
+          <button class="dock-btn active" data-tool="move"><b>↔</b><span>Move</span></button>
+          <button class="dock-btn" data-tool="crop"><b>⌗</b><span>Crop</span></button>
+          <button class="dock-btn" data-tool="brush"><b>✦</b><span>Brush</span></button>
+          <button class="dock-btn" data-tool="shape"><b>□</b><span>Shape</span></button>
+          <button class="dock-btn" data-tool="text"><b>T</b><span>Text</span></button>
+          <button class="dock-btn" data-tool="act"><b>✎</b><span>ACT</span></button>
+          <button class="dock-btn" data-tool="chat"><b>☷</b><span>Chat</span></button>
+          <button class="dock-btn" data-tool="mask"><b>▧</b><span>HUD</span></button>
+          <button class="dock-btn" data-tool="blur"><b>◌</b><span>Blur</span></button>
+          <button class="dock-btn" data-tool="effects"><b>◐</b><span>Effects</span></button>
+          <button class="dock-btn" data-tool="layer"><b>≡</b><span>Layers</span></button>
+          <button class="dock-btn" data-tool="canvas"><b>⚙</b><span>Canvas</span></button>
+        </nav>
+
+        <div class="statusbar safe-bottom">
+          <span id="statusText">Ready</span>
+          <span id="canvasMeta">1280 × 720</span>
+          <span id="autosaveState">Local</span>
+        </div>
+      </section>
+    </main>
+
+    <div class="sheet-backdrop" id="sheetBackdrop"></div>
+    <section class="bottom-sheet" id="bottomSheet" aria-hidden="true">
+      <div class="sheet-handle"></div>
+      <header class="sheet-header">
+        <div><small id="sheetKicker">MOVE</small><h2 id="sheetTitle">Transform</h2></div>
+        <button class="icon-btn" id="sheetClose" aria-label="Tutup">×</button>
+      </header>
+      <div class="sheet-content" id="sheetContent"></div>
+    </section>
+
+    <div class="modal" id="menuModal" aria-hidden="true">
+      <div class="modal-card">
+        <header class="modal-head"><div><small>FORGE MENU</small><h2>Project & Utility</h2></div><button class="icon-btn" id="menuClose">×</button></header>
+        <div class="menu-grid">
+          <button class="menu-item" data-action="importImage"><b>Import Screenshot</b><span>PNG / JPG / WebP</span></button>
+          <button class="menu-item" data-action="addImageLayer"><b>Tambah Image Layer</b><span>Overlay tambahan</span></button>
+          <button class="menu-item" data-action="newProject"><b>New Project</b><span>Mulai dari canvas kosong</span></button>
+          <button class="menu-item" data-action="openProjects"><b>Recent Projects</b><span>Autosave lokal</span></button>
+          <button class="menu-item" data-action="saveProject"><b>Save Project</b><span>Simpan ke perangkat</span></button>
+          <button class="menu-item" data-action="exportProject"><b>Export .ssrp</b><span>Backup editable</span></button>
+          <button class="menu-item" data-action="importProject"><b>Import .ssrp</b><span>Pulihkan project</span></button>
+          <button class="menu-item" data-action="openPresets"><b>Server Presets</b><span>Warna & format chat</span></button>
+          <button class="menu-item" data-action="openShortcuts"><b>Shortcuts</b><span>Keyboard & gesture</span></button>
+          <button class="menu-item danger" data-action="clearProject"><b>Clear Project</b><span>Hapus semua layer</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="exportModal" aria-hidden="true">
+      <div class="modal-card export-card">
+        <header class="modal-head"><div><small>EXPORT</small><h2>Final Screenshot</h2></div><button class="icon-btn" id="exportClose">×</button></header>
+        <div class="form-grid three">
+          <label>Format<select id="exportFormat"><option value="png">PNG</option><option value="jpeg">JPG</option><option value="webp">WebP</option></select></label>
+          <label>Quality<select id="exportQuality"><option value="0.65">Low</option><option value="0.82">Medium</option><option value="0.92" selected>High</option><option value="1">Max</option></select></label>
+          <label>Output<select id="exportResolution"><option value="original">Original</option><option value="1080">Max 1080p</option><option value="1440">Max 1440p</option><option value="2160">Max 4K</option></select></label>
+        </div>
+        <div class="export-note" id="exportMeta">No screenshot imported.</div>
+        <div class="button-row"><button class="secondary" id="downloadBtn">Download</button><button class="primary" id="shareBtn">Share</button><button class="ghost" id="openBtn">Open</button></div>
+      </div>
+    </div>
+
+    <div class="modal" id="welcomeModal" aria-hidden="true">
+      <div class="modal-card welcome-card">
+        <div class="eyebrow">SSRP FORGE STUDIO</div>
+        <h1>Editor SSRP yang enak dipakai di Android.</h1>
+        <p>ACT Builder, layer, HUD Cleaner, blur, text, shape, effects, crop, project autosave, dan export bekerja lokal di perangkat.</p>
+        <div class="welcome-actions"><button class="primary big" data-action="importImage">Import Screenshot</button><button class="secondary big" data-action="newProject">Create Blank Project</button></div>
+        <div class="tips"><span>👆 Drag = move</span><span>🤏 2 jari = zoom/pan</span><span>↶ Undo aman</span></div>
+      </div>
+    </div>
+
+    <input type="file" id="imageInput" accept="image/png,image/jpeg,image/webp" hidden>
+    <input type="file" id="projectInput" accept=".ssrp,application/json" hidden>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
