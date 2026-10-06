@@ -365,10 +365,15 @@
 
   function drawImageLayer(c,l){
     const src=assetSrc(l);if(!src)return;
-    const promise=loadImage(src);
-    promise.then(()=>queueRender()).catch(()=>{});
     const current=state.imageCache.get(src);
-    if(!current || current instanceof Promise)return;
+    // IMPORTANT: never schedule a render from an already-decoded image.
+    // The previous code called Promise.resolve(img).then(queueRender) on every
+    // frame, creating an endless RAF loop and the visible Android blinking.
+    if(!current){
+      loadImage(src).then(()=>queueRender()).catch(()=>{});
+      return;
+    }
+    if(current instanceof Promise)return;
     const drawable=adjustedDrawable(src,current);
     c.save();c.globalAlpha=clamp(l.opacity??1,0,1);
     c.translate(l.x+l.w/2,l.y+l.h/2);
@@ -616,9 +621,11 @@
     const [k,t]=TOOL_META[tool]||['TOOL',tool];
     els.sheetKicker.textContent=k;
     els.sheetTitle.textContent=t;
-    // Re-render the tool body without restarting the bottom-sheet animation.
-    // This prevents the visible "blink" when adding/updating ACT/Text layers.
-    els.sheetContent.innerHTML=toolMarkup(tool);
+    // Keep the existing sheet DOM when the same tool is already open.
+    // Rebuilding innerHTML here was another source of visible flashing on Android.
+    if(!sameTool || !els.sheetContent.childElementCount){
+      els.sheetContent.innerHTML=toolMarkup(tool);
+    }
     if(!wasOpen){
       els.bottomSheet.classList.add('open');
       els.bottomSheet.setAttribute('aria-hidden','false');
@@ -695,18 +702,18 @@
     const msg={id:uid('msg'),mode,name,text,vars:{location:getBindValue('actLocation',''),action:getBindValue('actAction','')},timestamp:Date.now(),time:formatClock(Date.now()),size:Number(getBindValue('actSize',state.project.server.fontSize)),color:null,showTimestamp:getBindValue('actTimestamp',state.project.server.timestamp)};
     const x=Number.isFinite(state._nextChatY)?state._nextChatY:Math.max(24,state.project.height-90);
     const layer={id:uid('layer'),type:'chat',name:`${mode.toUpperCase()} · ${name||'Message'}`,message:msg,x:32,y:Math.max(20,x),width:Math.min(650,state.project.width-64),height:72,size:msg.size,scale:1,rotation:0,opacity:1,visible:true,locked:false};
-    state.project.layers.push(layer);state.selectedLayerId=layer.id;state.editingLayerId=null;state._nextChatY=Math.max(20,x-80);commit('Add ACT message');openTool('act');notify('ACT message ditambahkan');
+    state.project.layers.push(layer);state.selectedLayerId=layer.id;state.editingLayerId=null;state._nextChatY=Math.max(20,x-80);commit('Add ACT message');renderActOnly();queueRender();notify('ACT message ditambahkan');
   }
   function updateAct(){
     const l=state.editingLayerId?state.project.layers.find(x=>x.id===state.editingLayerId):getSelectedLayer();if(!l||l.type!=='chat'){addAct();return;}
-    l.message={...(l.message||{}),mode:state._draftAct?.mode||l.message.mode,name:getBindValue('actName',l.message.name||''),text:getBindValue('actText',l.message.text||''),vars:{location:getBindValue('actLocation',l.message.vars?.location||''),action:getBindValue('actAction',l.message.vars?.action||'')},timestamp:l.message.timestamp||Date.now(),time:l.message.time||formatClock(l.message.timestamp),size:Number(getBindValue('actSize',l.message.size||state.project.server.fontSize))};l.size=l.message.size;l.name=`${l.message.mode.toUpperCase()} · ${l.message.name||'Message'}`;state.editingLayerId=null;commit('Update ACT');openTool('act');notify('ACT message diperbarui');
+    l.message={...(l.message||{}),mode:state._draftAct?.mode||l.message.mode,name:getBindValue('actName',l.message.name||''),text:getBindValue('actText',l.message.text||''),vars:{location:getBindValue('actLocation',l.message.vars?.location||''),action:getBindValue('actAction',l.message.vars?.action||'')},timestamp:l.message.timestamp||Date.now(),time:l.message.time||formatClock(l.message.timestamp),size:Number(getBindValue('actSize',l.message.size||state.project.server.fontSize))};l.size=l.message.size;l.name=`${l.message.mode.toUpperCase()} · ${l.message.name||'Message'}`;state.editingLayerId=null;commit('Update ACT');renderActOnly();queueRender();notify('ACT message diperbarui');
   }
 
   function addText(){
-    const text=getBindValue('textValue','Text Layer');const l={id:uid('layer'),type:'text',name:'Caption',text:text||'Text Layer',x:state.project.width*.1,y:state.project.height*.12,width:state.project.width*.7,height:100,size:Number(getBindValue('textSize',26)),font:getBindValue('textFont','Arial'),weight:Number(getBindValue('textWeight',600)),color:getBindValue('textColor','#ffffff'),lineHeight:1.2,align:'left',shadow:true,scale:1,rotation:0,opacity:1,visible:true,locked:false};state.project.layers.push(l);state.selectedLayerId=l.id;commit('Add text');openTool('text');notify('Text layer ditambahkan');
+    const text=getBindValue('textValue','Text Layer');const l={id:uid('layer'),type:'text',name:'Caption',text:text||'Text Layer',x:state.project.width*.1,y:state.project.height*.12,width:state.project.width*.7,height:100,size:Number(getBindValue('textSize',26)),font:getBindValue('textFont','Arial'),weight:Number(getBindValue('textWeight',600)),color:getBindValue('textColor','#ffffff'),lineHeight:1.2,align:'left',shadow:true,scale:1,rotation:0,opacity:1,visible:true,locked:false};state.project.layers.push(l);state.selectedLayerId=l.id;commit('Add text');queueRender();notify('Text layer ditambahkan');
   }
   function updateText(){const l=getSelectedLayer();if(!l||l.type!=='text'){notify('Pilih text layer dulu');return;}l.text=getBindValue('textValue',l.text);l.size=Number(getBindValue('textSize',l.size));l.font=getBindValue('textFont',l.font);l.weight=Number(getBindValue('textWeight',l.weight));l.color=getBindValue('textColor',l.color);commit('Update text');notify('Text diperbarui');}
-  function addShape(){const l={id:uid('layer'),type:'shape',name:'Rectangle',shape:'rect',x:state.project.width*.12,y:state.project.height*.2,w:260,h:110,fill:getBindValue('shapeFill','#d7ff64'),stroke:getBindValue('shapeStroke','#d7ff64'),strokeWidth:Number(getBindValue('shapeWidth',3)),fillMode:getBindValue('shapeMode','fill'),radius:12,scale:1,rotation:0,opacity:.55,visible:true,locked:false};state.project.layers.push(l);state.selectedLayerId=l.id;commit('Add shape');openTool('shape');notify('Shape layer ditambahkan');}
+  function addShape(){const l={id:uid('layer'),type:'shape',name:'Rectangle',shape:'rect',x:state.project.width*.12,y:state.project.height*.2,w:260,h:110,fill:getBindValue('shapeFill','#d7ff64'),stroke:getBindValue('shapeStroke','#d7ff64'),strokeWidth:Number(getBindValue('shapeWidth',3)),fillMode:getBindValue('shapeMode','fill'),radius:12,scale:1,rotation:0,opacity:.55,visible:true,locked:false};state.project.layers.push(l);state.selectedLayerId=l.id;commit('Add shape');queueRender();notify('Shape layer ditambahkan');}
   function addBrushLayer(){const l={id:uid('layer'),type:'brush',name:'Brush',points:[],color:getBindValue('brushColor','#d7ff64'),size:Number(getBindValue('brushSize',18)),opacity:Number(getBindValue('brushOpacity',1)),visible:true,locked:false};state.project.layers.push(l);state.selectedLayerId=l.id;commit('New brush layer');notify('Brush layer siap');}
 
   function duplicateLayer(l){if(!l)return;const d=clone(l);d.id=uid('layer');d.name=`${l.name||l.type} copy`;d.x=(l.x||0)+18;d.y=(l.y||0)+18;if(d.type==='chat')d.message.id=uid('msg');state.project.layers.push(d);state.selectedLayerId=d.id;commit('Duplicate layer');openTool('layer');}
